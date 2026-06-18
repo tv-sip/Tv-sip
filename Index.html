@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TV Display Info</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --panel: #16161f;
+    --border: #2a2a3a;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --success: #10b981;
+    --text: #e8e8f0;
+    --muted: #6b7280;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== EDITOR ===== */
+  #editor-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #07070d;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .editor-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex; align-items: center; gap: 16px;
+    position: sticky; top: 0; z-index: 10;
+  }
+
+  .editor-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 2px; color: var(--accent);
+  }
+
+  .editor-title { font-size: 14px; color: var(--muted); flex: 1; }
+
+  .btn {
+    padding: 8px 18px; border-radius: 6px; border: none;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: 'Inter', sans-serif; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #00b8d9; transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #059669; }
+
+  .editor-body {
+    display: grid; grid-template-columns: 280px 1fr; flex: 1;
+  }
+
+  .editor-sidebar {
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 20px; display: flex; flex-direction: column; gap: 16px;
+    min-height: calc(100vh - 57px);
+  }
+
+  .sidebar-section { display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-label {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 4px;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 12px; color: var(--muted); }
+
+  input[type="text"], input[type="number"], input[type="url"],
+  textarea, select {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text);
+    font-family: 'Inter', sans-serif; font-size: 13px;
+    padding: 8px 10px; outline: none; transition: border-color 0.15s; width: 100%;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  .color-row { display: flex; align-items: center; gap: 8px; }
+  input[type="color"] {
+    width: 36px; height: 36px; border-radius: 6px;
+    border: 1px solid var(--border); cursor: pointer; padding: 2px; background: var(--panel);
+  }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+  /* Media list */
+  .media-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+  .media-item {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px;
+    display: flex; align-items: center; gap: 8px;
+    transition: border-color 0.15s;
+  }
+  .media-item:hover { border-color: var(--accent); }
+  .media-item.active-item { border-color: var(--accent); background: rgba(0,212,255,0.05); }
+  .media-thumb {
+    width: 44px; height: 30px; border-radius: 4px;
+    background: var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0; overflow: hidden;
+  }
+  .media-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .media-info { flex: 1; min-width: 0; }
+  .media-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .media-type { font-size: 10px; color: var(--muted); }
+  .media-remove {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 4px;
+  }
+  .media-remove:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+
+  /* Ticker tags */
+  .ticker-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .ticker-tag {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 4px; padding: 3px 8px;
+    font-size: 11px; display: flex; align-items: center; gap: 5px;
+  }
+  .ticker-tag button {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 13px; line-height: 1; padding: 0;
+  }
+  .ticker-tag button:hover { color: var(--danger); }
+
+  .editor-main { padding: 24px; overflow-y: auto; }
+
+  .preview-box {
+    background: #000; border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; aspect-ratio: 16/9; position: relative;
+    max-width: 820px; margin: 0 auto;
+    box-shadow: 0 0 60px rgba(0,212,255,0.06);
+  }
+  .preview-label {
+    text-align: center; font-size: 11px; color: var(--muted);
+    margin-bottom: 12px; letter-spacing: 1px;
+    font-weight: 600; text-transform: uppercase;
+  }
+
+  /* ===== TV DISPLAY SHELL ===== */
+  #tv-display, #tv-display-fs {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    overflow: hidden; position: relative;
+  }
+
+  .tv-header {
+    display: flex; align-items: center;
+    padding: 0 20px; height: 52px;
+    background: rgba(10,10,15,0.97);
+    border-bottom: 1px solid var(--border);
+    gap: 16px; position: relative; z-index: 2; flex-shrink: 0;
+  }
+
+  .tv-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px; letter-spacing: 3px; color: var(--accent);
+    line-height: 1; text-shadow: 0 0 20px rgba(0,212,255,0.4);
+  }
+
+  .tv-channel { font-size: 11px; color: var(--muted); letter-spacing: 1px; font-weight: 500; }
+
+  .live-badge {
+    background: var(--danger); color: #fff;
+    font-size: 9px; font-weight: 800; letter-spacing: 1px;
+    padding: 2px 7px; border-radius: 3px; text-transform: uppercase;
+    animation: blink 1.5s infinite;
+  }
+
+  .tv-clock-wrap { margin-left: auto; text-align: right; }
+  .tv-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px; font-weight: 600; color: var(--text);
+  }
+  .tv-date { font-size: 10px; color: var(--muted); line-height: 1.3; font-weight: 500; }
+
+  .tv-main {
+    flex: 1; display: grid;
+    grid-template-columns: 1fr 280px;
+    overflow: hidden;
+  }
+  .tv-main.no-sidebar { grid-template-columns: 1fr; }
+
+  /* ===== MEDIA ZONE ===== */
+  .tv-media {
+    position: relative; background: #000;
+    overflow: hidden; display: flex;
+    align-items: center; justify-content: center;
+  }
+
+  /* All slide elements sit stacked; only active one is visible */
+  .slide-el {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    display: block;
+  }
+  .slide-el.visible { opacity: 1; z-index: 1; }
+
+  .no-media-msg {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    color: var(--muted); z-index: 2; position: relative;
+  }
+  .no-media-msg .icon { font-size: 48px; }
+  .no-media-msg p { font-size: 13px; }
+
+  .tv-media-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 16px 20px 12px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    z-index: 3; pointer-events: none;
+  }
+  .tv-headline {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px; letter-spacing: 1px; line-height: 1.1;
+    color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+  }
+  .tv-subhead { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+  .media-counter {
+    position: absolute; top: 10px; left: 12px; z-index: 4;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: rgba(255,255,255,0.5);
+  }
+  .slide-dots {
+    position: absolute; top: 10px; right: 12px;
+    display: flex; gap: 5px; z-index: 4;
+  }
+  .slide-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.3); transition: background 0.3s;
+  }
+  .slide-dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  /* ===== SIDEBAR ===== */
+  .tv-sidebar {
+    background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  .info-block { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .info-block-label {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .info-block-label::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 8px var(--accent);
+    animation: blink 2s infinite;
+  }
+
+  .tv-announcement { font-size: 13px; line-height: 1.6; color: var(--text); }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px;
+  }
+  .stat-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px; font-weight: 600; color: var(--accent); line-height: 1;
+  }
+  .stat-lbl { font-size: 9px; color: var(--muted); margin-top: 3px; text-transform: uppercase; }
+
+  .schedule-list { display: flex; flex-direction: column; gap: 7px; overflow-y: auto; max-height: 180px; }
+  .schedule-item { display: flex; gap: 10px; align-items: flex-start; }
+  .sch-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--accent); font-weight: 600; min-width: 40px;
+  }
+  .sch-event { font-size: 12px; color: var(--text); line-height: 1.4; }
+  .sch-event.now { color: var(--warn); font-weight: 600; }
+
+  /* ===== TICKER ===== */
+  .tv-ticker {
+    height: 30px; display: flex; align-items: center;
+    overflow: hidden; flex-shrink: 0;
+  }
+  .ticker-label {
+    color: #000; font-size: 10px; font-weight: 800;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 0 14px; height: 100%;
+    display: flex; align-items: center; flex-shrink: 0;
+  }
+  .ticker-scroll-wrap { flex: 1; overflow: hidden; position: relative; }
+  .ticker-track {
+    display: flex; align-items: center;
+    white-space: nowrap;
+    animation: ticker-scroll 30s linear infinite;
+  }
+  @keyframes ticker-scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .ticker-text { font-size: 12px; font-weight: 500; color: #fff; padding-right: 60px; }
+  .ticker-sep { color: rgba(255,255,255,0.4); padding-right: 60px; }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ===== FULLSCREEN ===== */
+  #tv-fullscreen {
+    position: fixed; inset: 0; z-index: 5000;
+    display: none; flex-direction: column;
+    background: #000;
+  }
+  #tv-fullscreen.active { display: flex; }
+  #tv-display-fs { flex: 1; height: 0; }
+
+  /* ===== EDIT BUTTON ===== */
+  #edit-btn-fixed {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--accent); color: #000; border: none;
+    border-radius: 50px; padding: 12px 22px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,212,255,0.4); z-index: 100;
+    display: none; align-items: center; gap: 8px;
+    font-family: 'Inter', sans-serif; transition: all 0.2s;
+  }
+  #edit-btn-fixed:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(0,212,255,0.5); }
+
+  /* ===== EDITOR FORM EXTRAS ===== */
+  .tab-row { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab-btn {
+    flex: 1; padding: 7px 0;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 5px; color: var(--muted);
+    font-size: 11px; font-weight: 600;
+    cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  .tab-pane { display: none; }
+  .tab-pane.active { display: flex; flex-direction: column; gap: 10px; }
+
+  .file-drop {
+    border: 1.5px dashed var(--border); border-radius: 8px;
+    padding: 20px; text-align: center; cursor: pointer; position: relative;
+    transition: all 0.15s;
+  }
+  .file-drop:hover, .file-drop.dragover { border-color: var(--accent); background: rgba(0,212,255,0.04); }
+  .file-drop input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .file-drop .drop-icon { font-size: 32px; display: block; margin-bottom: 8px; }
+  .file-drop strong { font-size: 13px; color: var(--text); }
+  .file-drop p { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+  .url-input-row { display: flex; gap: 6px; }
+  .url-input-row input { flex: 1; }
+
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--panel); border-radius: 6px; padding: 8px 10px;
+  }
+  .toggle-row label { font-size: 12px; cursor: pointer; }
+  input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+
+  .tag-badge {
+    display: inline-block;
+    background: rgba(0,212,255,0.1); color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.2); border-radius: 3px;
+    font-size: 9px; font-weight: 600; padding: 1px 6px; letter-spacing: 0.5px;
+  }
+
+  .help-text { font-size: 10px; color: var(--muted); line-height: 1.5; }
+  .section-actions { display: flex; gap: 6px; margin-top: 6px; }
+  .section-actions .btn { font-size: 11px; padding: 6px 12px; flex: 1; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @media (max-width: 800px) {
+    .editor-body { grid-template-columns: 1fr; }
+    .editor-sidebar { min-height: auto; }
+    .tv-main { grid-template-columns: 1fr; }
+    .tv-sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== EDITOR ===== -->
+<div id="editor-overlay">
+  <div class="editor-header">
+    <div class="editor-logo">TV·INFO</div>
+    <div class="editor-title">Editor Tampilan TV</div>
+    <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
+    <button class="btn btn-primary" onclick="launchFullscreen()">⛶ Fullscreen</button>
+    <button class="btn btn-success" onclick="closeEditor()">✓ Pratinjau</button>
+  </div>
+
+  <div class="editor-body">
+    <!-- LEFT SIDEBAR -->
+    <div class="editor-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Identitas Saluran</div>
+        <div class="form-group">
+          <label>Nama / Logo Saluran</label>
+          <input type="text" id="inp-logo" value="TV·INFO" oninput="update()">
+        </div>
+        <div class="form-group">
+          <label>Sub-Saluran</label>
+          <input type="text" id="inp-channel" value="KANAL INFORMASI UTAMA" oninput="update()">
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Konten Utama</div>
+        <div class="form-group">
+          <label>Headline</label>
+          <input type="text" id="inp-headline" value="Selamat Datang di Layar Informasi" oninput="update()">
+        </div>
+        <div class="form-group">
+          <label>Sub-judul</label>
+          <input type="text" id="inp-subhead" value="Informasi terkini untuk Anda" oninput="update()">
+        </div>
+        <div class="form-group">
+          <label>Pengumuman Sidebar</label>
+          <textarea id="inp-announce" oninput="update()">Selamat datang! Tambahkan media, teks berjalan, dan jadwal acara menggunakan editor ini.</textarea>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Tampilan</div>
+        <div class="form-group">
+          <label>Warna Aksen</label>
+          <div class="color-row">
+            <input type="color" id="inp-accent" value="#00d4ff" oninput="updateAccent()">
+            <input type="text" id="inp-accent-hex" value="#00d4ff" oninput="syncAccentHex()">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Warna Ticker</label>
+          <div class="color-row">
+            <input type="color" id="inp-accent2" value="#7c3aed" oninput="updateAccent2()">
+            <input type="text" id="inp-accent2-hex" value="#7c3aed" oninput="syncAccent2Hex()">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Interval Slide (detik)</label>
+          <input type="number" id="inp-interval" value="5" min="2" max="60" oninput="restartSlideshow()">
+        </div>
+        <div class="toggle-row">
+          <label for="chk-live">Badge LIVE</label>
+          <input type="checkbox" id="chk-live" checked onchange="update()">
+        </div>
+        <div class="toggle-row">
+          <label for="chk-sidebar">Panel Kanan</label>
+          <input type="checkbox" id="chk-sidebar" checked onchange="update()">
+        </div>
+        <div class="toggle-row">
+          <label for="chk-ticker">Teks Berjalan</label>
+          <input type="checkbox" id="chk-ticker" checked onchange="update()">
+        </div>
+      </div>
+
+      <div class="section-actions">
+        <button class="btn btn-success" onclick="closeEditor()">✓ Pratinjau</button>
+        <button class="btn btn-ghost" onclick="launchFullscreen()">⛶ Fullscreen</button>
+      </div>
+    </div>
+
+    <!-- MAIN PANEL -->
+    <div class="editor-main">
+      <div class="preview-label">⬤ PRATINJAU LANGSUNG</div>
+      <div class="preview-box">
+        <div id="tv-display"></div>
+      </div>
+
+      <!-- bottom grid: media + ticker/jadwal/stats -->
+      <div style="max-width:820px;margin:28px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+        <!-- MEDIA -->
+        <div>
+          <div class="sidebar-label" style="margin-bottom:12px;">Media — Gambar &amp; Video</div>
+          <div class="tab-row">
+            <button class="tab-btn active" onclick="switchTab('upload')">📁 Unggah File</button>
+            <button class="tab-btn" onclick="switchTab('url')">🔗 Via URL</button>
+          </div>
+
+          <div id="tab-upload" class="tab-pane active">
+            <div class="file-drop" id="drop-zone">
+              <input type="file" id="file-input" accept="image/*,video/*" multiple onchange="handleFiles(event)">
+              <span class="drop-icon">🖼️</span>
+              <strong>Klik atau seret file ke sini</strong>
+              <p>Gambar: JPG, PNG, GIF, WebP &nbsp;|&nbsp; Video: MP4, WebM</p>
+            </div>
+          </div>
+
+          <div id="tab-url" class="tab-pane">
+            <div class="form-group">
+              <label>Nama Media</label>
+              <input type="text" id="url-name" placeholder="Nama tampilan (opsional)">
+            </div>
+            <div class="form-group">
+              <label>Pilih Tipe</label>
+              <select id="url-type">
+                <option value="image">🖼 Gambar</option>
+                <option value="video">🎬 Video</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>URL Media</label>
+              <div class="url-input-row">
+                <input type="url" id="url-input" placeholder="https://example.com/gambar.jpg">
+                <button class="btn btn-primary" onclick="addFromUrl()">+ Tambah</button>
+              </div>
+            </div>
+            <p class="help-text">Gunakan URL langsung ke file gambar atau video (bukan halaman web).</p>
+          </div>
+
+          <div class="sidebar-label" style="margin:14px 0 8px;">Antrian Media (<span id="media-count">0</span>)</div>
+          <div class="media-list" id="media-list-ui">
+            <div id="media-empty" style="font-size:12px;color:var(--muted);text-align:center;padding:16px;">
+              Belum ada media. Unggah atau masukkan URL.
+            </div>
+          </div>
+        </div>
+
+        <!-- TICKER + JADWAL + STATS -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+          <div>
+            <div class="sidebar-label" style="margin-bottom:10px;">Teks Berjalan</div>
+            <div class="url-input-row" style="margin-bottom:8px;">
+              <input type="text" id="ticker-input" placeholder="Ketik pesan teks berjalan...">
+              <button class="btn btn-primary" onclick="addTicker()">+</button>
+            </div>
+            <div class="ticker-tags" id="ticker-tags-ui"></div>
+          </div>
+
+          <div>
+            <div class="sidebar-label" style="margin-bottom:10px;">Jadwal Acara</div>
+            <div class="url-input-row">
+              <input type="text" id="sch-time" placeholder="09:00" style="width:80px;flex:none;">
+              <input type="text" id="sch-event" placeholder="Nama acara / kegiatan" style="flex:1;">
+              <button class="btn btn-primary" onclick="addSchedule()">+</button>
+            </div>
+            <div id="sch-list-ui" style="display:flex;flex-direction:column;gap:5px;margin-top:8px;max-height:200px;overflow-y:auto;"></div>
+          </div>
+
+          <div>
+            <div class="sidebar-label" style="margin-bottom:10px;">Statistik</div>
+            <div id="stats-list" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;margin-bottom:8px;"></div>
+            <button onclick="addStat()" style="border:1px dashed var(--border);border-radius:6px;background:transparent;color:var(--muted);padding:8px;cursor:pointer;font-size:12px;width:100%;font-family:'Inter',sans-serif;transition:all .15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)';" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)';">+ Tambah Statistik</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FULLSCREEN ===== -->
+<div id="tv-fullscreen">
+  <div id="tv-display-fs"></div>
+  <button onclick="exitFullscreen()" style="
+    position:fixed;top:14px;right:14px;z-index:5100;
+    background:rgba(0,0,0,0.75);color:#fff;
+    border:1px solid rgba(255,255,255,0.2);border-radius:6px;
+    padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;
+    font-family:'Inter',sans-serif;backdrop-filter:blur(6px);">
+    ✕ Tutup Fullscreen
+  </button>
+</div>
+
+<button id="edit-btn-fixed" onclick="openEditor()">✏️ Edit Konten</button>
+
+<script>
+// ===================== STATE =====================
+const S = {
+  logo: 'TV·INFO',
+  channel: 'KANAL INFORMASI UTAMA',
+  headline: 'Selamat Datang di Layar Informasi',
+  subhead: 'Informasi terkini untuk Anda',
+  announce: 'Selamat datang! Tambahkan media, teks berjalan, dan jadwal acara menggunakan editor ini.',
+  accent: '#00d4ff',
+  accent2: '#7c3aed',
+  interval: 5,
+  showLive: true,
+  showSidebar: true,
+  showTicker: true,
+  media: [],      // { id, name, src, type:'image'|'video' }
+  ticker: ['Selamat datang di layar informasi kami','Informasi diperbarui secara berkala','Hubungi admin untuk informasi lebih lanjut'],
+  schedule: [
+    {time:'08:00',event:'Pembukaan & Sambutan'},
+    {time:'09:00',event:'Sesi Informasi Pagi'},
+    {time:'10:30',event:'Istirahat'},
+    {time:'11:00',event:'Sesi Utama'},
+    {time:'12:00',event:'ISHOMA'},
+    {time:'13:00',event:'Sesi Siang'},
+  ],
+  stats: [{val:'1.247',lbl:'Pengunjung'},{val:'98%',lbl:'Kepuasan'}]
+};
+
+let currentSlide = 0;
+let slideTimer   = null;
+let mediaIdCtr   = 0;
+let clockTimers  = {};
+
+// ===================== DISPLAY BUILDERS =====================
+// Build the static shell once per target; only rebuild when layout options change.
+// Media elements are managed separately (addSlideEl / removeSlideEl).
+
+function buildShell(targetId) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="tv-header" id="${targetId}-hdr">
+      <div class="tv-logo" id="${targetId}-logo">${S.logo}</div>
+      <div class="tv-channel" id="${targetId}-ch">${S.channel}</div>
+      <span class="live-badge" id="${targetId}-live" style="display:${S.showLive?'inline':'none'}">LIVE</span>
+      <div class="tv-clock-wrap">
+        <div class="tv-time" id="${targetId}-clock">--:--:--</div>
+        <div class="tv-date"  id="${targetId}-date">--</div>
+      </div>
+    </div>
+
+    <div class="tv-main${S.showSidebar?'':' no-sidebar'}" id="${targetId}-main">
+      <div class="tv-media" id="${targetId}-media">
+        <div class="no-media-msg" id="${targetId}-nomedia" style="display:${S.media.length?'none':'flex'}">
+          <span class="icon">📺</span>
+          <p>Belum ada media — tambahkan di editor</p>
+        </div>
+        <div class="media-counter" id="${targetId}-counter"></div>
+        <div class="slide-dots"    id="${targetId}-dots"></div>
+        <div class="tv-media-overlay">
+          <div class="tv-headline" id="${targetId}-headline">${S.headline}</div>
+          <div class="tv-subhead"  id="${targetId}-subhead">${S.subhead}</div>
+        </div>
+      </div>
+
+      ${S.showSidebar ? `
+      <div class="tv-sidebar">
+        <div class="info-block">
+          <div class="info-block-label">Pengumuman</div>
+          <div class="tv-announcement" id="${targetId}-announce">${S.announce}</div>
+        </div>
+        ${S.stats.length ? `
+        <div class="info-block">
+          <div class="info-block-label">Statistik</div>
+          <div class="stat-grid" id="${targetId}-stats">${buildStatsHTML()}</div>
+        </div>` : ''}
+        <div class="info-block" style="flex:1;overflow:hidden;">
+          <div class="info-block-label">Jadwal Acara</div>
+          <div class="schedule-list" id="${targetId}-sched">${buildSchedHTML()}</div>
+        </div>
+      </div>` : ''}
+    </div>
+
+    ${S.showTicker ? `
+    <div class="tv-ticker" id="${targetId}-ticker" style="background:${S.accent2};">
+      <div class="ticker-label" style="background:${S.accent};color:#000;">TERKINI</div>
+      <div class="ticker-scroll-wrap">
+        <div class="ticker-track" id="${targetId}-track">${buildTickerHTML()}</div>
+      </div>
+    </div>` : ''}
+  `;
+
+  // Re-inject media elements into the new DOM
+  const mediaZone = document.getElementById(`${targetId}-media`);
+  S.media.forEach((m, idx) => {
+    const el2 = createSlideEl(m, idx === currentSlide);
+    mediaZone.appendChild(el2);
+  });
+
+  updateDots(targetId);
+  updateCounter(targetId);
+  startClock(targetId);
+}
+
+function buildStatsHTML() {
+  return S.stats.map(s => `
+    <div class="stat-card">
+      <div class="stat-val">${s.val}</div>
+      <div class="stat-lbl">${s.lbl}</div>
+    </div>`).join('');
+}
+
+function buildSchedHTML() {
+  return S.schedule.map((s, i) => `
+    <div class="schedule-item">
+      <span class="sch-time">${s.time}</span>
+      <span class="sch-event${i===0?' now':''}">${s.event}${i===0?' ●':''}</span>
+    </div>`).join('');
+}
+
+function buildTickerHTML() {
+  if (!S.ticker.length) return '<span class="ticker-text">Tambahkan teks berjalan di editor...</span>';
+  const items = [...S.ticker, ...S.ticker];
+  return items.map(t => `<span class="ticker-text">${t}</span><span class="ticker-sep">◆</span>`).join('');
+}
+
+// ===================== SLIDE ELEMENTS =====================
+function createSlideEl(m, visible) {
+  let el;
+  if (m.type === 'video') {
+    el = document.createElement('video');
+    el.autoplay = true;
+    el.muted = true;
+    el.loop = true;
+    el.playsInline = true;
+    el.src = m.src;
+  } else {
+    el = document.createElement('img');
+    el.src = m.src;
+    el.alt = m.name;
+  }
+  el.className = 'slide-el' + (visible ? ' visible' : '');
+  el.dataset.mid = m.id;
+  return el;
+}
+
+// Add a new slide element to all displays
+function addSlideElToDisplay(targetId, m) {
+  const zone = document.getElementById(`${targetId}-media`);
+  if (!zone) return;
+  const noMedia = document.getElementById(`${targetId}-nomedia`);
+  if (noMedia) noMedia.style.display = 'none';
+  const el = createSlideEl(m, S.media.length === 1); // visible if it's the only one
+  zone.appendChild(el);
+}
+
+// Remove a slide element from a display
+function removeSlideElFromDisplay(targetId, mid) {
+  const zone = document.getElementById(`${targetId}-media`);
+  if (!zone) return;
+  const el = zone.querySelector(`[data-mid="${mid}"]`);
+  if (el) el.remove();
+  const noMedia = document.getElementById(`${targetId}-nomedia`);
+  if (noMedia) noMedia.style.display = S.media.length ? 'none' : 'flex';
+}
+
+function showSlide(targetId, idx) {
+  const zone = document.getElementById(`${targetId}-media`);
+  if (!zone) return;
+  zone.querySelectorAll('.slide-el').forEach((el, i) => {
+    const isVisible = i === idx;
+    el.classList.toggle('visible', isVisible);
+    if (isVisible && el.tagName === 'VIDEO') {
+      el.currentTime = 0;
+      el.play().catch(() => {});
+    }
+  });
+  updateDots(targetId);
+  updateCounter(targetId);
+}
+
+function updateDots(targetId) {
+  const el = document.getElementById(`${targetId}-dots`);
+  if (!el) return;
+  el.innerHTML = S.media.map((_, i) =>
+    `<div class="slide-dot${i === currentSlide ? ' active' : ''}"></div>`
+  ).join('');
+}
+
+function updateCounter(targetId) {
+  const el = document.getElementById(`${targetId}-counter`);
+  if (!el) return;
+  el.textContent = S.media.length > 1 ? `${currentSlide + 1} / ${S.media.length}` : '';
+}
+
+// ===================== TEXT/STYLE PATCHES (no rebuild) =====================
+const DISPLAYS = ['tv-display', 'tv-display-fs'];
+
+function patchText(id, val) {
+  DISPLAYS.forEach(t => {
+    const el = document.getElementById(`${t}-${id}`);
+    if (el) el.textContent = val;
+  });
+}
+
+function patchHTML(id, html) {
+  DISPLAYS.forEach(t => {
+    const el = document.getElementById(`${t}-${id}`);
+    if (el) el.innerHTML = html;
+  });
+}
+
+function patchStyle(id, prop, val) {
+  DISPLAYS.forEach(t => {
+    const el = document.getElementById(`${t}-${id}`);
+    if (el) el.style[prop] = val;
+  });
+}
+
+// ===================== CLOCK =====================
+function startClock(targetId) {
+  if (clockTimers[targetId]) clearInterval(clockTimers[targetId]);
+  function tick() {
+    const now = new Date();
+    const c = document.getElementById(`${targetId}-clock`);
+    const d = document.getElementById(`${targetId}-date`);
+    if (!c) { clearInterval(clockTimers[targetId]); return; }
+    c.textContent = now.toLocaleTimeString('id-ID', {hour12: false});
+    d.textContent = now.toLocaleDateString('id-ID', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  }
+  tick();
+  clockTimers[targetId] = setInterval(tick, 1000);
+}
+
+// ===================== SLIDESHOW =====================
+function restartSlideshow() {
+  S.interval = parseInt(document.getElementById('inp-interval').value) || 5;
+  if (slideTimer) clearInterval(slideTimer);
+  if (S.media.length < 2) return;
+  slideTimer = setInterval(() => {
+    currentSlide = (currentSlide + 1) % S.media.length;
+    DISPLAYS.forEach(t => showSlide(t, currentSlide));
+    renderMediaList(); // update active highlight
+  }, S.interval * 1000);
+}
+
+// ===================== GENERAL UPDATE (no rebuild) =====================
+function update() {
+  S.logo     = document.getElementById('inp-logo').value;
+  S.channel  = document.getElementById('inp-channel').value;
+  S.headline = document.getElementById('inp-headline').value;
+  S.subhead  = document.getElementById('inp-subhead').value;
+  S.announce = document.getElementById('inp-announce').value;
+  S.showLive = document.getElementById('chk-live').checked;
+
+  patchText('logo',     S.logo);
+  patchText('ch',       S.channel);
+  patchText('headline', S.headline);
+  patchText('subhead',  S.subhead);
+  patchText('announce', S.announce);
+  DISPLAYS.forEach(t => {
+    const el = document.getElementById(`${t}-live`);
+    if (el) el.style.display = S.showLive ? 'inline' : 'none';
+  });
+
+  // Sidebar / ticker toggling requires a rebuild (layout change)
+  const newSidebar = document.getElementById('chk-sidebar').checked;
+  const newTicker  = document.getElementById('chk-ticker').checked;
+  if (newSidebar !== S.showSidebar || newTicker !== S.showTicker) {
+    S.showSidebar = newSidebar;
+    S.showTicker  = newTicker;
+    DISPLAYS.forEach(buildShell);
+  }
+
+  applyAccentCSS();
+}
+
+function applyAccentCSS() {
+  document.documentElement.style.setProperty('--accent',  S.accent);
+  document.documentElement.style.setProperty('--accent2', S.accent2);
+  // patch ticker colors directly
+  DISPLAYS.forEach(t => {
+    const ticker = document.getElementById(`${t}-ticker`);
+    if (ticker) ticker.style.background = S.accent2;
+    const label = ticker ? ticker.querySelector('.ticker-label') : null;
+    if (label) { label.style.background = S.accent; label.style.color = '#000'; }
+  });
+}
+
+function updateAccent() {
+  S.accent = document.getElementById('inp-accent').value;
+  document.getElementById('inp-accent-hex').value = S.accent;
+  applyAccentCSS();
+}
+function syncAccentHex() {
+  const v = document.getElementById('inp-accent-hex').value;
+  if (/^#[0-9a-f]{6}$/i.test(v)) {
+    S.accent = v;
+    document.getElementById('inp-accent').value = v;
+    applyAccentCSS();
+  }
+}
+function updateAccent2() {
+  S.accent2 = document.getElementById('inp-accent2').value;
+  document.getElementById('inp-accent2-hex').value = S.accent2;
+  applyAccentCSS();
+}
+function syncAccent2Hex() {
+  const v = document.getElementById('inp-accent2-hex').value;
+  if (/^#[0-9a-f]{6}$/i.test(v)) {
+    S.accent2 = v;
+    document.getElementById('inp-accent2').value = v;
+    applyAccentCSS();
+  }
+}
+
+// ===================== MEDIA =====================
+function handleFiles(event) {
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const type = file.type.startsWith('video') ? 'video' : 'image';
+      doAddMedia({ name: file.name, src: e.target.result, type });
+    };
+    reader.readAsDataURL(file);
+  });
+  event.target.value = '';
+}
+
+function addFromUrl() {
+  const url  = document.getElementById('url-input').value.trim();
+  const name = document.getElementById('url-name').value.trim() || url.split('/').pop() || 'Media';
+  const type = document.getElementById('url-type').value;
+  if (!url) return alert('Masukkan URL terlebih dahulu.');
+  doAddMedia({ name, src: url, type });
+  document.getElementById('url-input').value = '';
+  document.getElementById('url-name').value  = '';
+}
+
+function doAddMedia(item) {
+  item.id = ++mediaIdCtr;
+  S.media.push(item);
+  DISPLAYS.forEach(t => addSlideElToDisplay(t, item));
+  renderMediaList();
+  restartSlideshow();
+  // if first item, show it
+  if (S.media.length === 1) {
+    currentSlide = 0;
+    DISPLAYS.forEach(t => showSlide(t, 0));
+  }
+}
+
+function removeMedia(id) {
+  const idx = S.media.findIndex(m => m.id === id);
+  if (idx === -1) return;
+  S.media.splice(idx, 1);
+  DISPLAYS.forEach(t => removeSlideElFromDisplay(t, id));
+  if (currentSlide >= S.media.length) currentSlide = Math.max(0, S.media.length - 1);
+  if (S.media.length) DISPLAYS.forEach(t => showSlide(t, currentSlide));
+  renderMediaList();
+  restartSlideshow();
+}
+
+function renderMediaList() {
+  const el = document.getElementById('media-list-ui');
+  const countEl = document.getElementById('media-count');
+  if (countEl) countEl.textContent = S.media.length;
+
+  const empty = document.getElementById('media-empty');
+  if (empty) empty.style.display = S.media.length ? 'none' : 'block';
+
+  // Remove old items (keep the empty msg)
+  el.querySelectorAll('.media-item').forEach(n => n.remove());
+
+  S.media.forEach((m, i) => {
+    const div = document.createElement('div');
+    div.className = 'media-item' + (i === currentSlide ? ' active-item' : '');
+
+    const thumb = document.createElement('div');
+    thumb.className = 'media-thumb';
+    if (m.type === 'video') {
+      thumb.textContent = '🎬';
+    } else {
+      const img = document.createElement('img');
+      img.src = m.src;
+      img.alt = '';
+      thumb.appendChild(img);
+    }
+
+    const info = document.createElement('div');
+    info.className = 'media-info';
+    info.innerHTML = `<div class="media-name">${m.name}</div>
+      <div class="media-type"><span class="tag-badge">${m.type==='video'?'🎬 VIDEO':'🖼 GAMBAR'}</span></div>`;
+
+    const rm = document.createElement('button');
+    rm.className = 'media-remove';
+    rm.textContent = '✕';
+    rm.title = 'Hapus';
+    rm.onclick = () => removeMedia(m.id);
+
+    div.appendChild(thumb);
+    div.appendChild(info);
+    div.appendChild(rm);
+    el.appendChild(div);
+  });
+}
+
+// Drag-and-drop on drop zone
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => doAddMedia({ name: file.name, src: ev.target.result, type: file.type.startsWith('video')?'video':'image' });
+    reader.readAsDataURL(file);
+  });
+});
+
+// ===================== TICKER =====================
+function addTicker() {
+  const inp = document.getElementById('ticker-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  S.ticker.push(val);
+  inp.value = '';
+  renderTickerTags();
+  patchHTML('track', buildTickerHTML());
+}
+function removeTicker(i) {
+  S.ticker.splice(i, 1);
+  renderTickerTags();
+  patchHTML('track', buildTickerHTML());
+}
+function renderTickerTags() {
+  const el = document.getElementById('ticker-tags-ui');
+  el.innerHTML = S.ticker.map((t, i) => `
+    <div class="ticker-tag">
+      ${t.length > 28 ? t.slice(0,28)+'…' : t}
+      <button onclick="removeTicker(${i})">✕</button>
+    </div>`).join('');
+}
+
+// ===================== SCHEDULE =====================
+function addSchedule() {
+  const time  = document.getElementById('sch-time').value.trim();
+  const event = document.getElementById('sch-event').value.trim();
+  if (!time || !event) return;
+  S.schedule.push({time, event});
+  S.schedule.sort((a, b) => a.time.localeCompare(b.time));
+  document.getElementById('sch-time').value  = '';
+  document.getElementById('sch-event').value = '';
+  renderScheduleList();
+  patchHTML('sched', buildSchedHTML());
+}
+function removeSchedule(i) {
+  S.schedule.splice(i, 1);
+  renderScheduleList();
+  patchHTML('sched', buildSchedHTML());
+}
+function renderScheduleList() {
+  const el = document.getElementById('sch-list-ui');
+  el.innerHTML = S.schedule.map((s, i) => `
+    <div class="toggle-row">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);">${s.time}</span>
+      <span style="font-size:12px;flex:1;margin:0 8px;">${s.event}</span>
+      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" onclick="removeSchedule(${i})">✕</button>
+    </div>`).join('');
+}
+
+// ===================== STATS =====================
+function addStat() {
+  S.stats.push({val:'0', lbl:'Label'});
+  renderStatsList();
+  patchHTML('stats', buildStatsHTML());
+}
+function removeStat(i) {
+  S.stats.splice(i, 1);
+  renderStatsList();
+  patchHTML('stats', buildStatsHTML());
+}
+function statChanged() {
+  patchHTML('stats', buildStatsHTML());
+}
+function renderStatsList() {
+  const el = document.getElementById('stats-list');
+  el.innerHTML = S.stats.map((s, i) => `
+    <div class="toggle-row" style="gap:6px;">
+      <input type="text" value="${s.val}" style="width:70px;" placeholder="Nilai"
+        oninput="S.stats[${i}].val=this.value; statChanged()">
+      <input type="text" value="${s.lbl}" style="flex:1;" placeholder="Label"
+        oninput="S.stats[${i}].lbl=this.value; statChanged()">
+      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;" onclick="removeStat(${i})">✕</button>
+    </div>`).join('');
+}
+
+// ===================== TABS =====================
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['upload','url'][i] === name);
+  });
+  ['upload','url'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === name);
+  });
+}
+
+// ===================== EDITOR / PREVIEW =====================
+function closeEditor() {
+  document.getElementById('editor-overlay').style.display = 'none';
+  document.getElementById('edit-btn-fixed').style.display = 'flex';
+}
+function openEditor() {
+  document.getElementById('editor-overlay').style.display = 'flex';
+  document.getElementById('edit-btn-fixed').style.display = 'none';
+}
+function launchFullscreen() {
+  const fs = document.getElementById('tv-fullscreen');
+  fs.classList.add('active');
+  buildShell('tv-display-fs');
+  if (S.media.length) showSlide('tv-display-fs', currentSlide);
+  if (fs.requestFullscreen) fs.requestFullscreen().catch(() => {});
+}
+function exitFullscreen() {
+  document.getElementById('tv-fullscreen').classList.remove('active');
+  if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+}
+
+// ===================== RESET =====================
+function resetAll() {
+  if (!confirm('Reset semua pengaturan ke default?')) return;
+  S.media = [];
+  S.ticker = ['Selamat datang di layar informasi kami','Informasi diperbarui secara berkala','Hubungi admin untuk informasi lebih lanjut'];
+  S.schedule = [
+    {time:'08:00',event:'Pembukaan & Sambutan'},
+    {time:'09:00',event:'Sesi Informasi Pagi'},
+    {time:'10:30',event:'Istirahat'},
+    {time:'11:00',event:'Sesi Utama'},
+    {time:'12:00',event:'ISHOMA'},
+    {time:'13:00',event:'Sesi Siang'},
+  ];
+  S.stats = [{val:'1.247',lbl:'Pengunjung'},{val:'98%',lbl:'Kepuasan'}];
+  currentSlide = 0;
+
+  document.getElementById('inp-logo').value    = 'TV·INFO';
+  document.getElementById('inp-channel').value = 'KANAL INFORMASI UTAMA';
+  document.getElementById('inp-headline').value= 'Selamat Datang di Layar Informasi';
+  document.getElementById('inp-subhead').value = 'Informasi terkini untuk Anda';
+  document.getElementById('inp-announce').value= 'Selamat datang! Tambahkan media, teks berjalan, dan jadwal acara menggunakan editor ini.';
+  document.getElementById('inp-interval').value= 5;
+  document.getElementById('chk-live').checked    = true;
+  document.getElementById('chk-sidebar').checked = true;
+  document.getElementById('chk-ticker').checked  = true;
+  S.showSidebar = true; S.showTicker = true; S.showLive = true;
+
+  DISPLAYS.forEach(buildShell);
+  renderMediaList();
+  renderTickerTags();
+  renderScheduleList();
+  renderStatsList();
+}
+
+// ===================== INIT =====================
+DISPLAYS.forEach(buildShell);
+renderMediaList();
+renderTickerTags();
+renderScheduleList();
+renderStatsList();
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') exitFullscreen();
+});
+</script>
+</body>
+</html>
